@@ -9,7 +9,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.27.9
 	github.com/creack/pty v1.1.18
 	github.com/tv42/httpunix v0.0.0-20191220191345-2ba4b9c3382c
-	golang.org/x/crypto v0.0.0-20220829220503-c86fa9a7ed90
+	golang.org/x/term v0.0.0-20220722155259-a9ba230a4035
 	gopkg.in/yaml.v2 v2.4.0
 )
 
@@ -32,5 +32,4 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	golang.org/x/sys v0.0.0-20220907062415-87db552b00fd // indirect
-	golang.org/x/term v0.0.0-20220722155259-a9ba230a4035 // indirect
 )

